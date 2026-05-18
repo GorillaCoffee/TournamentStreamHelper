@@ -177,6 +177,17 @@ class TSHScoreboardWidget(QWidget):
         col.layout().addWidget(self.playerNumber)
         self.playerNumber.valueChanged.connect(self.SetPlayersPerTeam)
 
+        self.cbBountiesActive = QCheckBox(
+            QApplication.translate("app", "Bounties active?"))
+        self.cbBountiesActive.setChecked(SettingsManager.Get("bounties_active", False))
+        self.cbBountiesActive.toggled.connect(lambda checked: [
+            SettingsManager.Set("bounties_active", checked),
+            self._reexport_all_player_bounties()
+        ])
+        if SettingsManager.Get("bounties_active", False):
+            QTimer.singleShot(0, self._reexport_all_player_bounties)
+        topOptions.layout().addWidget(self.cbBountiesActive)
+
         # THUMBNAIL
         col = QWidget()
         col.setLayout(QVBoxLayout())
@@ -1169,3 +1180,7 @@ class TSHScoreboardWidget(QWidget):
         print(players, "players", characters, "characters")
         self.playerNumber.setValue(players)
         self.charNumber.setValue(characters)
+
+    def _reexport_all_player_bounties(self):
+        for p in self.playerWidgets:
+            p.ExportBountyData()

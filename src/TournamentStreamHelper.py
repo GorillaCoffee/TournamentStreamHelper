@@ -114,6 +114,7 @@ from .TSHBracketWidget import TSHBracketWidget
 from .TSHTournamentInfoWidget import TSHTournamentInfoWidget
 from .TSHTournamentDataProvider import TSHTournamentDataProvider
 from .TournamentDataProvider.StartGGDataProvider import StartGGDataProvider
+from .TSHBountyTracker import TSHBountyTracker  # noqa: F401 — import creates the singleton
 from .TSHAlertNotification import TSHAlertNotification
 from .TSHPlayerDB import TSHPlayerDB
 from .Workers import *

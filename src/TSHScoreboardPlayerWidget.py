@@ -20,6 +20,8 @@ import time
 import math
 import random
 from .Helpers.TSHBadWordFilter import TSHBadWordFilter
+from .SettingsManager import SettingsManager
+from .TSHBountyTracker import TSHBountyTracker
 from loguru import logger
 
 
@@ -183,6 +185,8 @@ class TSHScoreboardPlayerWidget(QGroupBox):
         self.pronoun_completer.setModel(self.pronoun_model)
         self.pronoun_model.setStringList(self.pronoun_list)
 
+        TSHBountyTracker.signals.bounty_refresh.connect(self.ExportBountyData)
+
     def ComboBoxIndexChanged(self, element: QComboBox):
         StateManager.Set(
             f"{self.path}.{element.objectName()}", element.currentData())
@@ -244,6 +248,7 @@ class TSHScoreboardPlayerWidget(QGroupBox):
                 self.ExportPlayerImages()
                 self.ExportPlayerId()
                 self.ExportPlayerSeed()
+                self.ExportBountyData()
 
             self.lastExportedName = merged
 
@@ -314,12 +319,44 @@ class TSHScoreboardPlayerWidget(QGroupBox):
                         self.instanceSignals.player1Id_changed.emit()
                     else:
                         self.instanceSignals.player2Id_changed.emit()
+                self.ExportBountyData()
 
     def ExportPlayerSeed(self, seed=None):
         with self.dataLock:
             if StateManager.Get(f"{self.path}.seed") != seed:
                 StateManager.Set(
                     f"{self.path}.seed", seed)
+
+    def ExportBountyData(self):
+        if not SettingsManager.Get("bounties_active", False):
+            StateManager.Set(f"{self.path}.bounty_active", False)
+            StateManager.Set(f"{self.path}.bounty_amount", None)
+            return
+
+        gamertag = self.findChild(QLineEdit, "name").text()
+        if not gamertag:
+            StateManager.Set(f"{self.path}.bounty_active", False)
+            StateManager.Set(f"{self.path}.bounty_amount", None)
+            return
+
+        my_seed = StateManager.Get(f"{self.path}.seed")
+        has_bounty = bool(my_seed) and TSHBountyTracker.instance.has_active_bounty(
+            gamertag, int(my_seed))
+
+        if has_bounty:
+            score_prefix = self.path.split(".team.")[0]
+            opp_team = "2" if ".team.1." in self.path else "1"
+            opp_seed = StateManager.Get(
+                f"{score_prefix}.team.{opp_team}.player.1.seed")
+
+            bounty_active = bool(
+                my_seed and opp_seed and int(my_seed) < int(opp_seed)
+            )
+        else:
+            bounty_active = False
+
+        StateManager.Set(f"{self.path}.bounty_active", bounty_active)
+        StateManager.Set(f"{self.path}.bounty_amount", 50 if bounty_active else None)
 
     def ExportPlayerCity(self, city=None):
         with self.dataLock:
@@ -370,6 +407,10 @@ class TSHScoreboardPlayerWidget(QGroupBox):
                         w.ExportPlayerId(tmpData[i]["id"])
                         StateManager.Set(f"{w.path}.seed", tmpData[i]["seed"])
                         StateManager.Set(f"{w.path}.city", tmpData[i]["city"])
+
+                    # Re-export bounty after both widgets have their new seeds
+                    other.ExportBountyData()
+                    self.ExportBountyData()
         finally:
             StateManager.ReleaseSaving()
 
@@ -858,6 +899,7 @@ class TSHScoreboardPlayerWidget(QGroupBox):
                 StateManager.Set(f"{self.path}.seed", data.get("seed"))
             if data.get("city"):
                 StateManager.Set(f"{self.path}.city", data.get("city"))
+            self.ExportBountyData()
         finally:
             StateManager.ReleaseSaving()
             self.dataLock.release()
