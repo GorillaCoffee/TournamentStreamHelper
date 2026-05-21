@@ -12,7 +12,7 @@ jobs:
   build:
     name: Generate Windows Release with Locale Files
     runs-on: ${{ matrix.os }}
-    if: ${{ github.ref == 'refs/heads/main' || startsWith( github.ref, 'refs/heads/feature/' ) || startsWith( github.ref, 'refs/heads/fix/' ) }}
+    if: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/the_hunt_is_on' || startsWith( github.ref, 'refs/heads/feature/' ) || startsWith( github.ref, 'refs/heads/fix/' ) }}
     strategy:
       fail-fast: false
       matrix:
